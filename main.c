@@ -13,7 +13,7 @@ void led_green_init() {
 }
 
 void led_green_toggle() {
-    // GPIOD->PTOR = (1 << 5); // Alterna el estado del LED Verde
+     GPIOD->PTOR = (1 << 5); // Alterna el estado del LED Verde
     
 }
 
