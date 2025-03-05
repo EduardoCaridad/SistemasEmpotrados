@@ -1,0 +1,23 @@
+-> PASOS PARA CONECTARME A LA TERMINAL 'screen' <-
+
+1. Identifico el puerto serial:
+
+   - Conecto mi placa a mi Mac.
+   - Abro una terminal y ejecuto el comando ls /dev/tty.* para listar los dispositivos.
+   - Busco un dispositivo que se parezca a /dev/tty.usbmodemXXXX (en mi caso, será /dev/tty.usbmodem1402).
+
+2. Uso screen para conectarme:
+
+   - Ejecuto el siguiente comando en la terminal: screen /dev/tty.usbmodem1402 115200.
+   - Me aseguro de que el número 115200 coincida con la configuración de mi programa.
+
+3. Presiono el botón SW2:
+
+   - Cuando presiono el botón SW2 en la placa, debo ver el mensaje "Hello World" en la terminal.
+
+4. Salgo de la sesión de screen:
+
+   - Para salir, presiono Ctrl + A, luego K y confirmo con y.
+
+5. Verifico el código:
+   - Me aseguro de que mi código envíe el mensaje, incluyendo una línea similar a PRINTF("Hello World\n"); 
