@@ -386,3 +386,28 @@ void lcd_display_error(uint8_t errorNum)
     LCD->WF8B[LCD_FRONTPLANE7] = LCD_CLEAR;
   }
 }
+
+
+//Displays 'end' in the LCD
+void lcd_display_end(void) {
+  // Letra "E"
+  LCD->WF8B[LCD_FRONTPLANE0] = LCD_SEG_D | LCD_SEG_E | LCD_SEG_F | LCD_SEG_G;
+  LCD->WF8B[LCD_FRONTPLANE1] = LCD_SEG_A;
+  // Letra "N"
+  LCD->WF8B[LCD_FRONTPLANE2] = LCD_SEG_E | LCD_SEG_G;
+  LCD->WF8B[LCD_FRONTPLANE3] = LCD_SEG_C;
+  // Letra "D"
+  LCD->WF8B[LCD_FRONTPLANE4] = LCD_SEG_D | LCD_SEG_E | LCD_SEG_G;
+  LCD->WF8B[LCD_FRONTPLANE5] = LCD_SEG_B | LCD_SEG_C;
+
+  // Limpiar los segmentos restantes
+  LCD->WF8B[LCD_FRONTPLANE6] = LCD_CLEAR;
+  LCD->WF8B[LCD_FRONTPLANE7] = LCD_CLEAR;
+}
+
+//Clear de all the Segments
+void lcd_clear(void) {
+  for (int i = 0; i < LCD_NUM_FRONTPLANE_PINS; i++) {
+    LCD->WF8B[LCD_Frontplane_Pin[i]] = LCD_CLEAR;  // Limpiar cada frontplane
+  }
+}
