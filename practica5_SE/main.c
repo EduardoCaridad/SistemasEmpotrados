@@ -61,17 +61,54 @@ void PORTDIntHandler(void) {
 
 //-------------------------------------------------- FUNCIONS DE XESTION DE COLAS --------------------------------------------------//
 
-void manage_producers(void) {
+// void manage_producers(void) {
 
-    num_producers = (num_producers + 1) % (MAX_PROD_CONS + 1); // Incrementa o número de produtores activos, e se chega ao máximo, volve a 0.
+//     num_producers = (num_producers + 1) % (MAX_PROD_CONS + 1); // Incrementa o número de produtores activos, e se chega ao máximo, volve a 0.
+
+//     for (int i = 0; i < MAX_PROD_CONS; i++) {
+//         if (i < num_producers && producerHandles[i] == NULL) {
+//             xTaskCreate(produce, "Producer", configMINIMAL_STACK_SIZE, NULL, 0, &producerHandles[i]); // Crea un novo produtor se non hai espazo na cola.
+
+//         } else if (i >= num_producers && producerHandles[i] != NULL) {
+//             vTaskDelete(producerHandles[i]); // Elimina o produtor se non hai espazo na cola.
+//             producerHandles[i] = NULL;
+//         }
+//     }
+
+//     updateLCD();
+// }
+
+// void manage_consumers(void) {
+
+//     num_consumers = (num_consumers + 1) % (MAX_PROD_CONS + 1);
+
+//     for (int i = 0; i < MAX_PROD_CONS; i++) {
+//         if (i < num_consumers && consumerHandles[i] == NULL) {
+//             xTaskCreate(consume, "Consumer", configMINIMAL_STACK_SIZE, NULL, 0, &consumerHandles[i]);
+
+//         } else if (i >= num_consumers && consumerHandles[i] != NULL) {
+//             vTaskDelete(consumerHandles[i]);
+//             consumerHandles[i] = NULL;
+//         }
+//     }
+
+//     updateLCD();
+// }
+
+
+//Crear e destruir tarefas consume RAM e tempo. Mellor creamos toda-las tarefas ó principio e suspendelas ou reanudalas (no main)
+//Creamos todos os productores e consumidores o principio pero os suspendemos (vTaskSuspend()) e en manage_producers() e manage_consumers() reanudamos ou suspendemos as tarefas segundo o número de produtores e consumidores activos.
+// Así evitámolo custo de crear e eliminar tarefas.
+
+
+void manage_producers(void) {
+    num_producers = (num_producers + 1) % (MAX_PROD_CONS + 1);
 
     for (int i = 0; i < MAX_PROD_CONS; i++) {
-        if (i < num_producers && producerHandles[i] == NULL) {
-            xTaskCreate(produce, "Producer", configMINIMAL_STACK_SIZE, NULL, 0, &producerHandles[i]); // Crea un novo produtor se non hai espazo na cola.
-
-        } else if (i >= num_producers && producerHandles[i] != NULL) {
-            vTaskDelete(producerHandles[i]); // Elimina o produtor se non hai espazo na cola.
-            producerHandles[i] = NULL;
+        if (i < num_producers) {
+            vTaskResume(producerHandles[i]);
+        } else {
+            vTaskSuspend(producerHandles[i]);
         }
     }
 
@@ -79,21 +116,20 @@ void manage_producers(void) {
 }
 
 void manage_consumers(void) {
-
     num_consumers = (num_consumers + 1) % (MAX_PROD_CONS + 1);
 
     for (int i = 0; i < MAX_PROD_CONS; i++) {
-        if (i < num_consumers && consumerHandles[i] == NULL) {
-            xTaskCreate(consume, "Consumer", configMINIMAL_STACK_SIZE, NULL, 0, &consumerHandles[i]);
-
-        } else if (i >= num_consumers && consumerHandles[i] != NULL) {
-            vTaskDelete(consumerHandles[i]);
-            consumerHandles[i] = NULL;
+        if (i < num_consumers) {
+            vTaskResume(consumerHandles[i]);
+        } else {
+            vTaskSuspend(consumerHandles[i]);
         }
     }
 
     updateLCD();
 }
+
+
 
 // -------------------------------------------------- FUNCIONS DE XESTION DO LCD --------------------------------------------------//
 
@@ -105,15 +141,39 @@ void updateLCD(void) {
 //-------------------------------------------------- TAREFAS PRODUCTORAS E CONSUMIDORAS --------------------------------------------------//
 
 
+// static void produce(void *pvParameters) {
+//     while (1) {
+//         int value = 1;
+//         xQueueSend(queue, &value, portMAX_DELAY); // Envia un número á cola.
+//         vTaskDelay(500/portTICK_PERIOD_MS); // Simula un tempo de produción.
+
+//         xSemaphoreTake(xMutex, portMAX_DELAY); // Toma o semáforo para protexer o acceso ao LCD.
+//         updateLCD(); // Actualiza o LCD co número de mensaxes pendentes e o número de produtores e consumidores activos.
+//         xSemaphoreGive(xMutex); // Libera o semáforo.
+//     }
+// }
+
+// static void consume(void *pvParameters) {
+//     while (1) {
+//         int value;
+//         xQueueReceive(queue, &value, portMAX_DELAY);
+//         vTaskDelay(500/portTICK_PERIOD_MS);
+
+//         xSemaphoreTake(xMutex, portMAX_DELAY);
+//         updateLCD();
+//         xSemaphoreGive(xMutex);
+//     }
+// }
+
+// Quitamo-lo mutex da función de actualización do LCD, xa que no é necesario porque cando chamas a uxQueueMessagesWaiting(queue), FreeRTOS xa protexe internamente o acceso á cola.
+
 static void produce(void *pvParameters) {
     while (1) {
         int value = 1;
-        xQueueSend(queue, &value, portMAX_DELAY); // Envia un número á cola.
-        vTaskDelay(500/portTICK_PERIOD_MS); // Simula un tempo de produción.
+        xQueueSend(queue, &value, portMAX_DELAY);
+        vTaskDelay(500/portTICK_PERIOD_MS);
 
-        xSemaphoreTake(xMutex, portMAX_DELAY); // Toma o semáforo para protexer o acceso ao LCD.
-        updateLCD(); // Actualiza o LCD co número de mensaxes pendentes e o número de produtores e consumidores activos.
-        xSemaphoreGive(xMutex); // Libera o semáforo.
+        updateLCD(); // SIN mutex
     }
 }
 
@@ -123,11 +183,11 @@ static void consume(void *pvParameters) {
         xQueueReceive(queue, &value, portMAX_DELAY);
         vTaskDelay(500/portTICK_PERIOD_MS);
 
-        xSemaphoreTake(xMutex, portMAX_DELAY);
-        updateLCD();
-        xSemaphoreGive(xMutex);
+        updateLCD(); // SIN mutex
     }
 }
+
+
 
 //-------------------------------------------------- FUNCION PRINCIPAL --------------------------------------------------//
 
@@ -138,8 +198,19 @@ int main(void) {
     sw_init();
     lcd_ini();
 
-    xMutex = xSemaphoreCreateMutex(); // Crea o semáforo tipo mutex para protexer o acceso ao LCD.
+   // xMutex = xSemaphoreCreateMutex(); // Crea o semáforo tipo mutex para protexer o acceso ao LCD. Xa non fai falla.
     queue = xQueueCreate(QUEUE_NUM_ELEMENTS, sizeof(int)); // Crea a cola de mensaxes compartida entre produtores e consumidores.
+
+   
+    // Crear todas as tarefas produtoras e consumidoras pero suspendidas
+    for (int i = 0; i < MAX_PROD_CONS; i++) {
+        xTaskCreate(produce, "Producer", configMINIMAL_STACK_SIZE, NULL, 1, &producerHandles[i]);
+        vTaskSuspend(producerHandles[i]); // Comezan suspendidas
+
+        xTaskCreate(consume, "Consumer", configMINIMAL_STACK_SIZE, NULL, 1, &consumerHandles[i]);
+        vTaskSuspend(consumerHandles[i]); // Comezan suspendidas
+    }
+
 
     updateLCD(); // Actualiza o LCD co número de mensaxes pendentes e o número de produtores e consumidores activos.
 
